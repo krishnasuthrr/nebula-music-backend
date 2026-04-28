@@ -9,9 +9,13 @@ const musicSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    artist: {
+    artistID: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "user",
+        required: true
+    },
+    artistName: {
+        type: String,
         required: true
     }
 })
