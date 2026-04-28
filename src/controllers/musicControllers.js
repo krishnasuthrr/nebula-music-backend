@@ -7,18 +7,10 @@ async function createMusic(req, res) {
     
     try {
 
-        const token = req.cookies.token
         const file = req.file
+        const user = req.user
 
-        if(!token) {
-            return res.status(401).json({ message: "Unauthorized" })
-        }
-
-        const decoded = jwt.verify(token, process.env.JWT_SECRET)
-
-        if (decoded.role !== "artist") {
-            return res.status(403).json({ message: "Only Artists can crate Music" })
-        }
+        const artist = await userModel.findById(user.id)
 
         const song = await imageKitClient.files.upload({
             file: file.buffer.toString("base64"), // contents of file converted in buffer format, then into string
@@ -30,7 +22,8 @@ async function createMusic(req, res) {
             const uploadSong = await musicModel.create({
                 url: song.url,
                 title: song.name,
-                artist: decoded.id
+                artistID: artist._id,
+                artistName: artist.username
             })
 
             return res.status(201).json({
@@ -51,38 +44,27 @@ async function searchSong(req, res) {
     
     try {
 
-        const token = req.cookies.token
         const { artistName, songTitle } = req.query
+        
+        const userToken = req.user
 
         if(!artistName && !songTitle) {
             return res.status(400).json({ message: "Invalid Queries" })
         }
 
-        if(!token) {
-            return res.status(401).json({ message: "Unauthorized User, Kindly Sign in or Register" })
-        }
+        const searchParameters = [];
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET)
-
-        const artists = await userModel.find({ 
-            username: { $regex: artistName, $options: "i" },
-            role: "artist" 
-        })
-
-        if(artists.length < 1) {
-            return res.status(400).json({ message: "No Artists found" })
-        }
-
-        const songs = await musicModel.find({
-          $or: [
-            {
-              artist: artists.map(artist => artist._id),
-            },
-            { title: songTitle },
-          ],
+        if(songTitle) searchParameters.push({
+            title: { $regex: songTitle, $options: "i" }
         });
 
-        console.log(songs)
+        if(artistName) searchParameters.push({ 
+            artistName: { $regex: artistName, $options: "i"} 
+        });
+
+        const songs = await musicModel.find({
+          $or: searchParameters
+        });
 
         if(songs.length < 1) {
             return res.status(404).json({ message: "No songs found" })
@@ -100,4 +82,40 @@ async function searchSong(req, res) {
 
 }
 
-module.exports = { createMusic, searchSong }
+
+async function updateSong(req, res) {
+    
+    try {
+        
+        const { title } = req.body
+        const user = req.user
+        const { songID } = req.params 
+
+        const song = await musicModel.findById(songID)
+
+        if(!song) {
+            return res.status(404).json({ message: "Song not found" });
+        } 
+
+        const artist = await userModel.findById(user.id)
+
+        if (!song.artistID.equals(user.id)) {
+            return res.status(401).json({ message: "Unauthorized Artist" })
+        }
+
+        song.title = title; 
+
+        const updatedSong = await song.save()
+
+        return res.status(200).json({
+            message: "Song Title updated successfully",
+            newTitle: updatedSong.title
+        })
+
+    } catch (error) {
+        console.error(error)
+    }
+
+}
+
+module.exports = { createMusic, searchSong, updateSong }
