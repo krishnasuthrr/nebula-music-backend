@@ -1,12 +1,12 @@
 const jwt = require("jsonwebtoken")
 
-async function authorizeRole(req, res, next) {
+async function authorizeArtist(req, res, next) {
     
     try {
         const user = req.user
     
         if(user.role !== "artist") {
-            return res.status(403).json({ message: "Only Artists can make or update songs" })
+            return res.status(403).json({ message: "Only Artists can Make, Update, or Delete their songs" })
         }
 
         next();
@@ -17,4 +17,4 @@ async function authorizeRole(req, res, next) {
 
 }
 
-module.exports = authorizeRole
+module.exports = authorizeArtist
