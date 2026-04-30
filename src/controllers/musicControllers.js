@@ -90,18 +90,7 @@ async function updateSong(req, res) {
         const { title } = req.body
         const user = req.user
         const { songID } = req.params 
-
-        const song = await musicModel.findById(songID)
-
-        if(!song) {
-            return res.status(404).json({ message: "Song not found" });
-        } 
-
-        const artist = await userModel.findById(user.id)
-
-        if (!song.artistID.equals(user.id)) {
-            return res.status(401).json({ message: "Unauthorized Artist" })
-        }
+        const song = req.song
 
         song.title = title; 
 
@@ -118,4 +107,21 @@ async function updateSong(req, res) {
 
 }
 
-module.exports = { createMusic, searchSong, updateSong }
+async function deleteSong(req, res) {
+    
+    try {
+        
+        const { songID } = req.params
+        
+        await musicModel.findByIdAndDelete(songID)
+        
+        return res.status(200).json({ message: "Song Deleted Successfully" })
+
+    } catch (error) {
+        console.error(error)
+        return res.status(500).json({ message: "Internal Server Error" })
+    }
+
+}
+
+module.exports = { createMusic, searchSong, updateSong, deleteSong }
